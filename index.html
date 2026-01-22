@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+  <!-- MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- Optional -->
+  <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    #ui-overlay {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-family: Arial, sans-serif;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="ui-overlay">Status: Menunggu kamera…</div>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;"
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
+
+  <a-assets>
+    <a-asset-item id="avatarModel" src="./soulless.glb"></a-asset-item>
+  </a-assets>
+
+  <!-- Kamera -->
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+  <!-- Target Marker -->
+  <a-entity id="marker" mindar-image-target="targetIndex: 0">
+    <a-gltf-model
+      id="model"
+      src="#avatarModel"
+      position="0 0 0.1"
+      rotation="0 0 0"
+      scale="0.005 0.005 0.005"
+      visible="false">
+    </a-gltf-model>
+  </a-entity>
+
+</a-scene>
+
+<script>
+  const sceneEl = document.querySelector("a-scene");
+  const ui = document.getElementById("ui-overlay");
+  const marker = document.getElementById("marker");
+  const model = document.getElementById("model");
+
+  let modelInitialized = false;
+
+  sceneEl.addEventListener("loaded", () => {
+    const mindarSystem = sceneEl.systems["mindar-image-system"];
+
+    // Kamera siap
+    mindarSystem.addEventListener("arReady", () => {
+      ui.innerText = "Kamera aktif — Scan gambar target";
+    });
+
+    // Error kamera / https
+    mindarSystem.addEventListener("arError", () => {
+      ui.innerText = "ERROR: Kamera diblokir (wajib HTTPS)";
+      ui.style.background = "red";
+    });
+  });
+
+  // Marker ditemukan
+  marker.addEventListener("targetFound", () => {
+    ui.innerText = "Target ditemukan";
+
+    if (!modelInitialized) {
+      model.setAttribute("visible", true);
+      modelInitialized = true;
+    } else {
+      model.setAttribute("visible", true);
+    }
+  });
+
+  // Marker hilang (model tidak di-reset)
+  marker.addEventListener("targetLost", () => {
+    ui.innerText = "Target hilang";
+    model.setAttribute("visible", false);
+  });
+</script>
+
+</body>
+</html>
