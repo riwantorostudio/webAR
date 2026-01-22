@@ -39,82 +39,131 @@
 <a-scene
   inspector="enabled: false"
   stats="false"
-  
   mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;"
-  color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights"
+  renderer="colorManagement: true"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false">
 
+  <!-- LIGHTING (BIKIN IMAGE TERASA 3D) -->
+  <a-light type="ambient" intensity="0.7"></a-light>
+  <a-light type="directional" position="1 1 1" intensity="0.6"></a-light>
+
+  <!-- ASSETS -->
   <a-assets>
     <img id="imgAR" src="./wbk.jpeg">
   </a-assets>
 
+  <!-- CAMERA -->
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+  <!-- MARKER -->
   <a-entity id="marker" mindar-image-target="targetIndex: 0">
-    <a-image
-      id="image"
-      src="#imgAR"
-      position="0 0 0.1"
-      width="0.6"      <!-- fallback -->
-     
-    </a-image>
+
+    <!-- GROUP (BIAR SMOOTH & 3D) -->
+    <a-entity
+      id="imageGroup"
+      position="0 0 0.12"
+      smooth-follow
+      floating>
+
+      <a-image
+        id="image"
+        src="#imgAR">
+      </a-image>
+
+    </a-entity>
   </a-entity>
 
 </a-scene>
 
 <script>
-  const sceneEl = document.querySelector("a-scene");
-  const ui = document.getElementById("ui-overlay");
-  const marker = document.getElementById("marker");
-  const image = document.getElementById("image");
-  const imgAsset = document.getElementById("imgAR");
-
-  function applyAutoRatio() {
-    const w = imgAsset.naturalWidth;
-    const h = imgAsset.naturalHeight;
-
-    if (!w || !h) return;
-
-    const baseHeight = 1.6;
-    const aspect = w / h;
-
-    image.setAttribute("height", baseHeight);
-    image.setAttribute("width", baseHeight * aspect);
+/* ===============================
+   COMPONENT: SMOOTH ROTATION
+================================ */
+AFRAME.registerComponent("smooth-follow", {
+  schema: { speed: { default: 0.08 } },
+  tick() {
+    const obj = this.el.object3D;
+    obj.rotation.x += (-obj.rotation.x) * this.data.speed;
+    obj.rotation.y += (-obj.rotation.y) * this.data.speed;
   }
+});
 
-  // 🔑 SOLUSI UTAMA
-  if (imgAsset.complete) {
-    applyAutoRatio();
-  } else {
-    imgAsset.addEventListener("load", applyAutoRatio);
+/* ===============================
+   COMPONENT: FLOATING EFFECT
+================================ */
+AFRAME.registerComponent("floating", {
+  schema: {
+    amplitude: { default: 0.03 },
+    speed: { default: 1 }
+  },
+  tick(time) {
+    this.el.object3D.position.y =
+      Math.sin(time / 1000 * this.data.speed) * this.data.amplitude;
   }
+});
 
-  sceneEl.addEventListener("loaded", () => {
-    const mindarSystem = sceneEl.systems["mindar-image-system"];
+/* ===============================
+   MAIN SCRIPT
+================================ */
+const sceneEl = document.querySelector("a-scene");
+const ui = document.getElementById("ui-overlay");
+const marker = document.getElementById("marker");
+const image = document.getElementById("image");
+const imageGroup = document.getElementById("imageGroup");
+const imgAsset = document.getElementById("imgAR");
 
-    mindarSystem.addEventListener("arReady", () => {
-      ui.innerText = "Kamera aktif — Scan gambar target";
-    });
+/* AUTO RATIO IMAGE */
+function applyAutoRatio() {
+  const w = imgAsset.naturalWidth;
+  const h = imgAsset.naturalHeight;
+  if (!w || !h) return;
 
-    mindarSystem.addEventListener("arError", () => {
-      ui.innerText = "ERROR: Kamera diblokir (wajib HTTPS)";
-      ui.style.background = "red";
-    });
+  const baseHeight = 1.8;   // 🔥 BESAR IMAGE DI SINI
+  const aspect = w / h;
+
+  image.setAttribute("height", baseHeight);
+  image.setAttribute("width", baseHeight * aspect);
+}
+
+if (imgAsset.complete) {
+  applyAutoRatio();
+} else {
+  imgAsset.addEventListener("load", applyAutoRatio);
+}
+
+/* CAMERA STATUS */
+sceneEl.addEventListener("loaded", () => {
+  const mindarSystem = sceneEl.systems["mindar-image-system"];
+
+  mindarSystem.addEventListener("arReady", () => {
+    ui.innerText = "Kamera aktif — Scan gambar target";
   });
 
-  marker.addEventListener("targetFound", () => {
-    ui.innerText = "Target ditemukan";
-    image.setAttribute("visible", true);
+  mindarSystem.addEventListener("arError", () => {
+    ui.innerText = "ERROR: Kamera diblokir (wajib HTTPS)";
+    ui.style.background = "red";
   });
+});
 
-  marker.addEventListener("targetLost", () => {
-    ui.innerText = "Target hilang";
-    image.setAttribute("visible", false);
+/* MARKER EVENTS */
+marker.addEventListener("targetFound", () => {
+  ui.innerText = "Target ditemukan";
+
+  imageGroup.object3D.scale.set(0.001, 0.001, 0.001);
+  imageGroup.setAttribute("animation__scale", {
+    property: "scale",
+    to: "1 1 1",
+    dur: 600,
+    easing: "easeOutElastic"
   });
+});
+
+marker.addEventListener("targetLost", () => {
+  ui.innerText = "Target hilang";
+  imageGroup.object3D.scale.set(0.001, 0.001, 0.001);
+});
 </script>
 
 </body>
 </html>
-
