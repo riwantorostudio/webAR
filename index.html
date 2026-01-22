@@ -94,8 +94,8 @@ AFRAME.registerComponent("smooth-follow", {
 ================================ */
 AFRAME.registerComponent("floating", {
   schema: {
-    amplitude: { default: 0.03 },
-    speed: { default: 1 }
+    amplitude: { default: 0.02 },
+    speed: { default: 0.05 }
   },
   tick(time) {
     this.el.object3D.position.y =
@@ -119,7 +119,7 @@ function applyAutoRatio() {
   const h = imgAsset.naturalHeight;
   if (!w || !h) return;
 
-  const baseHeight = 1.8;   // 🔥 BESAR IMAGE DI SINI
+  const baseHeight = 1.6;   // 🔥 BESAR IMAGE DI SINI
   const aspect = w / h;
 
   image.setAttribute("height", baseHeight);
@@ -167,3 +167,4 @@ marker.addEventListener("targetLost", () => {
 
 </body>
 </html>
+
