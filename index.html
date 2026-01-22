@@ -11,9 +11,6 @@
   <!-- MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-  <!-- Optional -->
-  <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
-
   <style>
     body {
       margin: 0;
@@ -40,6 +37,9 @@
 <div id="ui-overlay">Status: Menunggu kamera…</div>
 
 <a-scene
+  inspector="enabled: false"
+  stats="false"
+  
   mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;"
   color-space="sRGB"
   renderer="colorManagement: true, physicallyCorrectLights"
@@ -47,22 +47,19 @@
   device-orientation-permission-ui="enabled: false">
 
   <a-assets>
-    <a-asset-item id="avatarModel" src="./soulless.glb"></a-asset-item>
+    <img id="imgAR" src="./wbk.jpeg">
   </a-assets>
 
-  <!-- Kamera -->
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <!-- Target Marker -->
   <a-entity id="marker" mindar-image-target="targetIndex: 0">
-    <a-gltf-model
-      id="model"
-      src="#avatarModel"
+    <a-image
+      id="image"
+      src="#imgAR"
       position="0 0 0.1"
-      rotation="0 0 0"
-      scale="0.005 0.005 0.005"
-      visible="false">
-    </a-gltf-model>
+      width="0.6"      <!-- fallback -->
+     
+    </a-image>
   </a-entity>
 
 </a-scene>
@@ -71,41 +68,50 @@
   const sceneEl = document.querySelector("a-scene");
   const ui = document.getElementById("ui-overlay");
   const marker = document.getElementById("marker");
-  const model = document.getElementById("model");
+  const image = document.getElementById("image");
+  const imgAsset = document.getElementById("imgAR");
 
-  let modelInitialized = false;
+  function applyAutoRatio() {
+    const w = imgAsset.naturalWidth;
+    const h = imgAsset.naturalHeight;
+
+    if (!w || !h) return;
+
+    const baseHeight = 1.8;
+    const aspect = w / h;
+
+    image.setAttribute("height", baseHeight);
+    image.setAttribute("width", baseHeight * aspect);
+  }
+
+  // 🔑 SOLUSI UTAMA
+  if (imgAsset.complete) {
+    applyAutoRatio();
+  } else {
+    imgAsset.addEventListener("load", applyAutoRatio);
+  }
 
   sceneEl.addEventListener("loaded", () => {
     const mindarSystem = sceneEl.systems["mindar-image-system"];
 
-    // Kamera siap
     mindarSystem.addEventListener("arReady", () => {
       ui.innerText = "Kamera aktif — Scan gambar target";
     });
 
-    // Error kamera / https
     mindarSystem.addEventListener("arError", () => {
       ui.innerText = "ERROR: Kamera diblokir (wajib HTTPS)";
       ui.style.background = "red";
     });
   });
 
-  // Marker ditemukan
   marker.addEventListener("targetFound", () => {
     ui.innerText = "Target ditemukan";
-
-    if (!modelInitialized) {
-      model.setAttribute("visible", true);
-      modelInitialized = true;
-    } else {
-      model.setAttribute("visible", true);
-    }
+    image.setAttribute("visible", true);
   });
 
-  // Marker hilang (model tidak di-reset)
   marker.addEventListener("targetLost", () => {
     ui.innerText = "Target hilang";
-    model.setAttribute("visible", false);
+    image.setAttribute("visible", false);
   });
 </script>
 
