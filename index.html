@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AR Image Viewer</title>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -12,65 +13,141 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       overflow: hidden;
-      background: black;
+      background: #000;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     #ui-overlay {
       position: fixed;
-      top: 10px;
-      left: 10px;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 999;
-      padding: 10px 14px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      font-family: Arial, sans-serif;
-      border-radius: 6px;
+      padding: 12px 24px;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      border-radius: 25px;
       font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+      text-align: center;
+      min-width: 200px;
+    }
+
+    #ui-overlay.found {
+      background: rgba(76, 175, 80, 0.9);
+      border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    #ui-overlay.error {
+      background: rgba(244, 67, 54, 0.9);
+      border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    .loading-spinner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      border-top: 4px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 998;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
   </style>
 </head>
 
 <body>
 
-<div id="ui-overlay">Status: Menunggu kamera…</div>
+<div id="ui-overlay">Memuat kamera...</div>
+<div class="loading-spinner" id="spinner"></div>
 
 <a-scene
   inspector="enabled: false"
   stats="false"
-  mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;"
-  renderer="colorManagement: true"
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;"
+  renderer="colorManagement: true; antialias: true; alpha: true"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false">
 
-  <!-- LIGHTING (BIKIN IMAGE TERASA 3D) -->
-  <a-light type="ambient" intensity="0.7"></a-light>
-  <a-light type="directional" position="1 1 1" intensity="0.6"></a-light>
+  <!-- ENHANCED LIGHTING UNTUK 3D EFFECT -->
+  <a-light type="ambient" intensity="0.5"></a-light>
+  <a-light type="directional" position="2 4 3" intensity="0.8" castShadow="true"></a-light>
+  <a-light type="directional" position="-2 2 -1" intensity="0.4"></a-light>
+  <a-light type="point" position="0 3 0" intensity="0.3" distance="10"></a-light>
 
   <!-- ASSETS -->
   <a-assets>
-    <img id="imgAR" src="./wbk.jpeg">
+    <img id="imgAR" src="./wbk.jpeg" crossorigin="anonymous">
   </a-assets>
 
   <!-- CAMERA -->
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <!-- MARKER -->
+  <!-- MARKER TARGET -->
   <a-entity id="marker" mindar-image-target="targetIndex: 0">
 
-    <!-- GROUP (BIAR SMOOTH & 3D) -->
+    <!-- CONTAINER DENGAN TRANSFORM 3D -->
     <a-entity
-      id="imageGroup"
-      position="0 0 0.12"
-      smooth-follow
-      floating>
+      id="imageContainer"
+      position="0 0 0"
+      rotation="0 0 0">
 
-      <a-image
-        id="image"
-        src="#imgAR">
-      </a-image>
+      <!-- IMAGE GROUP DENGAN EFEK 3D -->
+      <a-entity
+        id="imageGroup"
+        position="0 0 0.15"
+        smooth-rotation
+        gentle-float
+        subtle-sway>
 
+        <!-- FRAME/BORDER -->
+        <a-plane
+          id="imageBorder"
+          position="0 0 -0.01"
+          color="#222"
+          opacity="0.9"
+          shader="flat">
+        </a-plane>
+
+        <!-- MAIN IMAGE -->
+        <a-image
+          id="mainImage"
+          src="#imgAR"
+          shader="flat"
+          transparent="true">
+        </a-image>
+
+        <!-- SUBTLE GLOW EFFECT -->
+        <a-plane
+          id="imageGlow"
+          position="0 0 -0.02"
+          color="#ffffff"
+          opacity="0.1"
+          shader="flat">
+        </a-plane>
+
+      </a-entity>
     </a-entity>
   </a-entity>
 
@@ -78,28 +155,64 @@
 
 <script>
 /* ===============================
-   COMPONENT: SMOOTH ROTATION
+   SMOOTH ROTATION COMPONENT
+   Rotasi halus mengikuti pergerakan
 ================================ */
-AFRAME.registerComponent("smooth-follow", {
-  schema: { speed: { default: 0.08 } },
-  tick() {
+AFRAME.registerComponent("smooth-rotation", {
+  schema: {
+    speed: { default: 0.05 },
+    maxRotation: { default: 0.1 }
+  },
+  init() {
+    this.targetRotation = { x: 0, y: 0 };
+  },
+  tick(time, delta) {
     const obj = this.el.object3D;
-    obj.rotation.x += (-obj.rotation.x) * this.data.speed;
-    obj.rotation.y += (-obj.rotation.y) * this.data.speed;
+    const speed = this.data.speed;
+    
+    // Smooth interpolation ke target rotation
+    obj.rotation.x += (this.targetRotation.x - obj.rotation.x) * speed;
+    obj.rotation.y += (this.targetRotation.y - obj.rotation.y) * speed;
+    
+    // Gentle automatic sway
+    this.targetRotation.x = Math.sin(time / 3000) * this.data.maxRotation;
+    this.targetRotation.y = Math.cos(time / 4000) * this.data.maxRotation;
   }
 });
 
 /* ===============================
-   COMPONENT: FLOATING EFFECT
+   GENTLE FLOAT COMPONENT
+   Efek melayang lembut
 ================================ */
-AFRAME.registerComponent("floating", {
+AFRAME.registerComponent("gentle-float", {
   schema: {
-    amplitude: { default: 0.02 },
-    speed: { default: 0.05 }
+    amplitude: { default: 0.025 },
+    speed: { default: 2 }
+  },
+  init() {
+    this.baseY = this.el.object3D.position.y;
   },
   tick(time) {
-    this.el.object3D.position.y =
-      Math.sin(time / 1000 * this.data.speed) * this.data.amplitude;
+    const offset = Math.sin(time / 1000 * this.data.speed) * this.data.amplitude;
+    this.el.object3D.position.y = this.baseY + offset;
+  }
+});
+
+/* ===============================
+   SUBTLE SWAY COMPONENT
+   Gerakan lembut ke kiri-kanan
+================================ */
+AFRAME.registerComponent("subtle-sway", {
+  schema: {
+    amplitude: { default: 0.015 },
+    speed: { default: 1.5 }
+  },
+  init() {
+    this.baseX = this.el.object3D.position.x;
+  },
+  tick(time) {
+    const offset = Math.cos(time / 1000 * this.data.speed) * this.data.amplitude;
+    this.el.object3D.position.x = this.baseX + offset;
   }
 });
 
@@ -108,63 +221,109 @@ AFRAME.registerComponent("floating", {
 ================================ */
 const sceneEl = document.querySelector("a-scene");
 const ui = document.getElementById("ui-overlay");
+const spinner = document.getElementById("spinner");
 const marker = document.getElementById("marker");
-const image = document.getElementById("image");
+const mainImage = document.getElementById("mainImage");
+const imageBorder = document.getElementById("imageBorder");
+const imageGlow = document.getElementById("imageGlow");
 const imageGroup = document.getElementById("imageGroup");
 const imgAsset = document.getElementById("imgAR");
 
-/* AUTO RATIO IMAGE */
-function applyAutoRatio() {
+/* AUTO RATIO & BORDER SIZING */
+function applyImageDimensions() {
   const w = imgAsset.naturalWidth;
   const h = imgAsset.naturalHeight;
   if (!w || !h) return;
 
-  const baseHeight = 1.6;   // 🔥 BESAR IMAGE DI SINI
+  const baseHeight = 1.6;
   const aspect = w / h;
+  const calculatedWidth = baseHeight * aspect;
 
-  image.setAttribute("height", baseHeight);
-  image.setAttribute("width", baseHeight * aspect);
+  // Set main image
+  mainImage.setAttribute("height", baseHeight);
+  mainImage.setAttribute("width", calculatedWidth);
+
+  // Set border (sedikit lebih besar)
+  const borderPadding = 0.08;
+  imageBorder.setAttribute("height", baseHeight + borderPadding);
+  imageBorder.setAttribute("width", calculatedWidth + borderPadding);
+
+  // Set glow (lebih besar lagi)
+  const glowPadding = 0.15;
+  imageGlow.setAttribute("height", baseHeight + glowPadding);
+  imageGlow.setAttribute("width", calculatedWidth + glowPadding);
 }
 
 if (imgAsset.complete) {
-  applyAutoRatio();
+  applyImageDimensions();
 } else {
-  imgAsset.addEventListener("load", applyAutoRatio);
+  imgAsset.addEventListener("load", applyImageDimensions);
 }
 
-/* CAMERA STATUS */
+/* CAMERA STATUS HANDLING */
 sceneEl.addEventListener("loaded", () => {
   const mindarSystem = sceneEl.systems["mindar-image-system"];
 
   mindarSystem.addEventListener("arReady", () => {
-    ui.innerText = "Kamera aktif — Scan gambar target";
+    spinner.style.display = "none";
+    ui.innerText = "Arahkan kamera ke target gambar";
+    ui.classList.remove("error");
   });
 
-  mindarSystem.addEventListener("arError", () => {
-    ui.innerText = "ERROR: Kamera diblokir (wajib HTTPS)";
-    ui.style.background = "red";
+  mindarSystem.addEventListener("arError", (e) => {
+    spinner.style.display = "none";
+    ui.innerText = "Kamera diblokir - Gunakan HTTPS";
+    ui.classList.add("error");
+    console.error("AR Error:", e);
   });
 });
 
-/* MARKER EVENTS */
+/* MARKER DETECTION EVENTS */
 marker.addEventListener("targetFound", () => {
-  ui.innerText = "Target ditemukan";
+  ui.innerText = "✓ Target Terdeteksi";
+  ui.classList.add("found");
 
-  imageGroup.object3D.scale.set(0.001, 0.001, 0.001);
+  // Smooth scale-in animation
+  imageGroup.object3D.scale.set(0.01, 0.01, 0.01);
   imageGroup.setAttribute("animation__scale", {
     property: "scale",
     to: "1 1 1",
+    dur: 800,
+    easing: "easeOutBack"
+  });
+
+  // Fade in animation
+  imageGroup.setAttribute("animation__opacity", {
+    property: "opacity",
+    from: 0,
+    to: 1,
     dur: 600,
-    easing: "easeOutElastic"
+    easing: "easeInQuad"
   });
 });
 
 marker.addEventListener("targetLost", () => {
-  ui.innerText = "Target hilang";
-  imageGroup.object3D.scale.set(0.001, 0.001, 0.001);
+  ui.innerText = "Mencari target...";
+  ui.classList.remove("found");
+
+  // Smooth scale-out
+  imageGroup.setAttribute("animation__scaleOut", {
+    property: "scale",
+    to: "0.01 0.01 0.01",
+    dur: 400,
+    easing: "easeInQuad"
+  });
+});
+
+/* PERFORMANCE OPTIMIZATION */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (spinner.style.display !== "none") {
+      spinner.style.display = "none";
+    }
+  }, 5000);
 });
 </script>
 
 </body>
 </html>
-
