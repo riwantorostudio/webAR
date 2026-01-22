@@ -107,19 +107,17 @@
   <!-- MARKER TARGET -->
   <a-entity id="marker" mindar-image-target="targetIndex: 0">
 
-    <!-- CONTAINER DENGAN TRANSFORM 3D -->
+    <!-- CONTAINER STABIL (TIDAK ROTASI) -->
     <a-entity
       id="imageContainer"
       position="0 0 0"
       rotation="0 0 0">
 
-      <!-- IMAGE GROUP DENGAN EFEK 3D -->
+      <!-- IMAGE GROUP DENGAN EFEK MINIMAL -->
       <a-entity
         id="imageGroup"
         position="0 0 0.15"
-        smooth-rotation
-        gentle-float
-        subtle-sway>
+        gentle-float>
 
         <!-- FRAME/BORDER -->
         <a-plane
@@ -155,39 +153,13 @@
 
 <script>
 /* ===============================
-   SMOOTH ROTATION COMPONENT
-   Rotasi halus mengikuti pergerakan
-================================ */
-AFRAME.registerComponent("smooth-rotation", {
-  schema: {
-    speed: { default: 0.05 },
-    maxRotation: { default: 0.1 }
-  },
-  init() {
-    this.targetRotation = { x: 0, y: 0 };
-  },
-  tick(time, delta) {
-    const obj = this.el.object3D;
-    const speed = this.data.speed;
-    
-    // Smooth interpolation ke target rotation
-    obj.rotation.x += (this.targetRotation.x - obj.rotation.x) * speed;
-    obj.rotation.y += (this.targetRotation.y - obj.rotation.y) * speed;
-    
-    // Gentle automatic sway
-    this.targetRotation.x = Math.sin(time / 3000) * this.data.maxRotation;
-    this.targetRotation.y = Math.cos(time / 4000) * this.data.maxRotation;
-  }
-});
-
-/* ===============================
    GENTLE FLOAT COMPONENT
-   Efek melayang lembut
+   Efek melayang lembut (opsional)
 ================================ */
 AFRAME.registerComponent("gentle-float", {
   schema: {
-    amplitude: { default: 0.025 },
-    speed: { default: 2 }
+    amplitude: { default: 0.015 },
+    speed: { default: 1.5 }
   },
   init() {
     this.baseY = this.el.object3D.position.y;
@@ -195,24 +167,6 @@ AFRAME.registerComponent("gentle-float", {
   tick(time) {
     const offset = Math.sin(time / 1000 * this.data.speed) * this.data.amplitude;
     this.el.object3D.position.y = this.baseY + offset;
-  }
-});
-
-/* ===============================
-   SUBTLE SWAY COMPONENT
-   Gerakan lembut ke kiri-kanan
-================================ */
-AFRAME.registerComponent("subtle-sway", {
-  schema: {
-    amplitude: { default: 0.015 },
-    speed: { default: 1.5 }
-  },
-  init() {
-    this.baseX = this.el.object3D.position.x;
-  },
-  tick(time) {
-    const offset = Math.cos(time / 1000 * this.data.speed) * this.data.amplitude;
-    this.el.object3D.position.x = this.baseX + offset;
   }
 });
 
@@ -229,13 +183,13 @@ const imageGlow = document.getElementById("imageGlow");
 const imageGroup = document.getElementById("imageGroup");
 const imgAsset = document.getElementById("imgAR");
 
-/* AUTO RATIO & BORDER SIZING */
+/* AUTO RATIO & BORDER SIZING - UKURAN LEBIH KECIL */
 function applyImageDimensions() {
   const w = imgAsset.naturalWidth;
   const h = imgAsset.naturalHeight;
   if (!w || !h) return;
 
-  const baseHeight = 1.6;
+  const baseHeight = 0.9;  // 🔥 UKURAN DIPERKECIL (dari 1.6 ke 0.9)
   const aspect = w / h;
   const calculatedWidth = baseHeight * aspect;
 
@@ -244,12 +198,12 @@ function applyImageDimensions() {
   mainImage.setAttribute("width", calculatedWidth);
 
   // Set border (sedikit lebih besar)
-  const borderPadding = 0.08;
+  const borderPadding = 0.05;
   imageBorder.setAttribute("height", baseHeight + borderPadding);
   imageBorder.setAttribute("width", calculatedWidth + borderPadding);
 
   // Set glow (lebih besar lagi)
-  const glowPadding = 0.15;
+  const glowPadding = 0.1;
   imageGlow.setAttribute("height", baseHeight + glowPadding);
   imageGlow.setAttribute("width", calculatedWidth + glowPadding);
 }
