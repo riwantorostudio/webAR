@@ -3,49 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Box World Space</title>
+  <title>AR Stabil</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
 </head>
 
 <body style="margin:0; overflow:hidden;">
 
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind;"
-    color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-    gesture-detector>
+<a-scene
+  mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.001; filterBeta: 10"
+  renderer="colorManagement: true; physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
 
-    <!-- Camera -->
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-camera look-controls="enabled: false"></a-camera>
 
-    <!-- Lighting -->
-    <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-    <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
+  <!-- Light -->
+  <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+  <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
 
-    <!-- Image Target -->
-    <a-entity id="marker" mindar-image-target="targetIndex: 0">
+  <!-- MARKER (tracking only) -->
+  <a-entity mindar-image-target="targetIndex: 0">
 
-      <!-- Box nempel ke marker -->
+    <!-- CONTAINER (anti jitter) -->
+    <a-entity id="container">
+
       <a-box
-        position="0 0 0.1"
+        position="0 0 0.3"
         scale="0.5 0.5 0.5"
-        color="red"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"
-        id="model"
-        src="#avatarModel"
-        class="clickable"
-        gesture-handler="rotationFactor: 1">
+        color="red">
       </a-box>
 
     </a-entity>
 
-  </a-scene>
+  </a-entity>
+
+</a-scene>
 
 </body>
 </html>
-
